@@ -161,8 +161,18 @@ class _DeudasScreenState extends State<DeudasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgDeudas,
       appBar: AppBar(
         title: const Text('Mis Obligaciones'),
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 28, color: AppColors.textPrimary),
+            tooltip: 'Nueva Obligación',
+            onPressed: () => _abrirFormularioNuevaDeuda(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.secondary))
@@ -220,12 +230,6 @@ class _DeudasScreenState extends State<DeudasScreen> {
                 ),
               ),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _abrirFormularioNuevaDeuda(),
-        backgroundColor: AppColors.primary,
-        foregroundColor: const Color(0xFF3B4A4A),
-        child: const Icon(Icons.add_rounded),
-      ),
     );
   }
 
@@ -252,186 +256,191 @@ class _DeudasScreenState extends State<DeudasScreen> {
       }
     } catch (_) {}
 
-    // Dinamismo cromático: Rosa Suave para alertas, Beige Cálido para normal
-    final Color cardColor = alerta ? AppColors.warning : AppColors.accent;
+    // Dinamismo cromático: Rosa Suave para alertas, Amarillo Mantequilla para normal
+    final Color borderCol = alerta ? AppColors.borderDeudasAlerta : AppColors.borderDeudasNormal;
+    final Color shadowCol = alerta ? AppColors.warning.withOpacity(0.25) : AppColors.accent.withOpacity(0.25);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      child: Card(
-        color: cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: AppColors.secondary, width: 1.5), // Borde Lavanda
-        ),
-        elevation: 0,
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      deuda['nombre'],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+      decoration: BoxDecoration(
+        color: AppColors.surface, // Blanco Puro
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderCol, width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: shadowCol, // Sombra con brillo a juego (rosa o amarillo)
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    deuda['nombre'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Row(
-                    children: [
-                      if (alerta)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFFFD8), // Crema Claro
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE5ECEC), width: 0.5),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.warning_amber_rounded, size: 12, color: Color(0xFFC0392B)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Pago Próximo',
-                                style: TextStyle(
+                ),
+                Row(
+                  children: [
+                    if (alerta)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface, // Blanco
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.borderDeudasAlerta, width: 1.0),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.warning_amber_rounded, size: 12, color: Color(0xFFC0392B)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Pago Próximo',
+                              style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFFC0392B),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF5E6F6F)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        onSelected: (val) {
-                          if (val == 'ver') {
-                            _abrirDetallesDeuda(deuda);
-                          } else if (val == 'editar') {
-                            _abrirFormularioNuevaDeuda(deudaParaEditar: deuda);
-                          } else if (val == 'eliminar') {
-                            _confirmarEliminarDeuda(deuda);
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(value: 'ver', child: Row(children: [Icon(Icons.query_stats_rounded, size: 18), SizedBox(width: 8), Text('Ver Detalles')])),
-                          const PopupMenuItem(value: 'editar', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Editar')])),
-                          const PopupMenuItem(value: 'eliminar', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFC0392B)), SizedBox(width: 8), Text('Eliminar', style: TextStyle(color: Color(0xFFC0392B)))]))
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Saldo Pendiente',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF5E6F6F)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '\$${_formatMonto(total)}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Cuota Mensual',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF5E6F6F)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '\$${_formatMonto(cuota)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const Divider(height: 24, thickness: 0.5, color: Color(0xFFD0DFDF)),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Interés: ${deuda['tasa_interes']}% mensual',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF5E6F6F)),
-                  ),
-                  Text(
-                    diasRestantesText.isNotEmpty 
-                        ? "$diasRestantesText (${deuda['fecha_proximo_pago']})" 
-                        : "Próximo: ${deuda['fecha_proximo_pago']}",
-                    style: TextStyle(
-                      fontSize: 11, 
-                      color: alerta ? const Color(0xFFC0392B) : const Color(0xFF5E6F6F),
-                      fontWeight: alerta ? FontWeight.bold : FontWeight.normal
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      onSelected: (val) {
+                        if (val == 'ver') {
+                          _abrirDetallesDeuda(deuda);
+                        } else if (val == 'editar') {
+                          _abrirFormularioNuevaDeuda(deudaParaEditar: deuda);
+                        } else if (val == 'eliminar') {
+                          _confirmarEliminarDeuda(deuda);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'ver', child: Row(children: [Icon(Icons.query_stats_rounded, size: 18), SizedBox(width: 8), Text('Ver Detalles')])),
+                        const PopupMenuItem(value: 'editar', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Editar')])),
+                        const PopupMenuItem(value: 'eliminar', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFC0392B)), SizedBox(width: 8), Text('Eliminar', style: TextStyle(color: Color(0xFFC0392B)))]))
+                      ],
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
-              if (limite != null && limite.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'Fecha Límite Final: $limite',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF5E6F6F),
-                      fontStyle: FontStyle.italic,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Saldo Pendiente',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '\$${_formatMonto(total)}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Cuota Mensual',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '\$${_formatMonto(cuota)}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Divider(height: 24, thickness: 0.5, color: borderCol),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Interés: ${deuda['tasa_interes']}% mensual',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                ),
+                Text(
+                  diasRestantesText.isNotEmpty 
+                      ? "$diasRestantesText (${deuda['fecha_proximo_pago']})" 
+                      : "Próximo: ${deuda['fecha_proximo_pago']}",
+                  style: TextStyle(
+                    fontSize: 11, 
+                    color: alerta ? const Color(0xFFC0392B) : AppColors.textSecondary,
+                    fontWeight: alerta ? FontWeight.bold : FontWeight.normal
                   ),
                 ),
               ],
-              const Divider(height: 24, thickness: 0.5, color: Color(0xFFD0DFDF)),
-              
-              // BOTÓN PARA PAGAR CUOTA
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: total <= 0 ? null : () => _abrirPagoDeuda(deuda),
-                  icon: const Icon(Icons.payment_rounded, size: 18, color: Color(0xFF2C3E50)),
-                  label: const Text('Pagar cuota', style: TextStyle(color: Color(0xFF2C3E50))),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFFD8), // Crema Claro para contraste premium
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFFE5ECEC), width: 0.8),
-                    ),
+            ),
+
+            if (limite != null && limite.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Fecha Límite Final: $limite',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ),
             ],
-          ),
+            Divider(height: 24, thickness: 0.5, color: borderCol),
+            
+            // BOTÓN PARA PAGAR CUOTA
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: total <= 0 ? null : () => _abrirPagoDeuda(deuda),
+                icon: const Icon(Icons.payment_rounded, size: 18, color: AppColors.textPrimary),
+                label: const Text('Pagar cuota', style: TextStyle(color: AppColors.textPrimary)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.surface, // Blanco para contraste premium
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: borderCol, width: 1.0),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -971,7 +980,22 @@ class _NuevaDeudaFormModalState extends State<NuevaDeudaFormModal> {
     });
 
     if (result['success']) {
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(widget.deuda != null ? '¡Obligación actualizada!' : '¡Obligación registrada con éxito!'),
+              ],
+            ),
+            backgroundColor: AppColors.secondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } else {
       setState(() {
         _errorMessage = result['message'] ?? 'Error al guardar la deuda.';

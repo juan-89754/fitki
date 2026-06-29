@@ -7,7 +7,9 @@ from .views import (
     DashboardView,
     MetaAhorroViewSet,
     DeudaViewSet,
-    AsistenteConsultaView
+    AsistenteConsultaView,
+    ProyectoCompraViewSet,
+    ItemProyectoViewSet
 )
 
 # Crear un router de DRF para registrar ViewSets
@@ -16,6 +18,10 @@ router.register(r'cuentas', CuentaViewSet, basename='cuenta')
 router.register(r'transacciones', TransaccionViewSet, basename='transaccion')
 router.register(r'metas', MetaAhorroViewSet, basename='meta')
 router.register(r'deudas', DeudaViewSet, basename='deuda')
+
+router.register(r'proyectos-compra', ProyectoCompraViewSet, basename='proyecto-compra')
+router.register(r'items-proyecto', ItemProyectoViewSet, basename='item-proyecto')
+
 
 urlpatterns = [
     # Rutas para autenticación y perfil

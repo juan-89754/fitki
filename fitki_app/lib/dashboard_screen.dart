@@ -5,7 +5,8 @@ import 'login_screen.dart';
 import 'forms_screens.dart';
 import 'metas_screen.dart';
 import 'deudas_screen.dart';
-import 'asistente_screen.dart';
+import 'package:fitki_app/asistente_screen.dart';
+import 'compras_plan_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,6 +23,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Datos financieros compartidos
   double _patrimonioNeto = 0.0;
+  double _totalCuentas = 0.0;
+  double _totalDeudas = 0.0;
   List<dynamic> _cuentas = [];
   List<dynamic> _transacciones = [];
   List<dynamic> _deudas = [];
@@ -57,6 +60,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _transacciones = data['ultimas_transacciones'] ?? [];
         _deudas = data['deudas'] ?? [];
 
+        // Calcular Patrimonio Neto (suma de cuentas)
+        double sumaCuentas = 0.0;
+        for (var c in _cuentas) {
+          sumaCuentas += double.tryParse(c['saldo_actual'].toString()) ?? 0.0;
+        }
+        _totalCuentas = sumaCuentas;
+
+        // Calcular Dinero por Pagar (suma de deudas)
+        double sumaDeudas = 0.0;
+        for (var d in _deudas) {
+          sumaDeudas += double.tryParse(d['monto_total'].toString()) ?? 0.0;
+        }
+        _totalDeudas = sumaDeudas;
+
         // Comprobar si hay alguna deuda con alerta_pago_proximo activa
         _tieneAlertaDeudas = _deudas.any((deuda) => deuda['alerta_pago_proximo'] == true);
       });
@@ -82,6 +99,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
         (route) => false,
       );
     }
+  }
+
+  void _verPerfilYPresupuestos() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.35,
+          minChildSize: 0.25,
+          maxChildSize: 0.5,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppColors.surface, // Blanco Puro
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24.0),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const Row(
+                    children: [
+                      Icon(Icons.person_rounded, size: 28, color: AppColors.secondary),
+                      SizedBox(width: 12),
+                      Text(
+                        'Mi Perfil',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgDashboard,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.borderDashboard),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Nombre: Usuario Fitki',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Email: usuario@fitki.com',
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _mostrarSugerenciaAhorroModal(String sugerencia) {
@@ -153,17 +246,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _buildResumenDashboardView(),
       const MetasScreen(),
       const DeudasScreen(),
+      const ComprasPlanScreen(),
       const AsistenteScreen(),
     ];
 
     return Scaffold(
       extendBody: true, // Permite que el cuerpo se dibuje detrás de la barra flotante
+      backgroundColor: AppColors.bgDashboard,
       appBar: _selectedIndex == 0
           ? AppBar(
               title: const Text('FITKI'),
               elevation: 0,
               backgroundColor: Colors.transparent,
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.person_rounded, color: AppColors.textSecondary),
+                  tooltip: 'Mi Perfil',
+                  onPressed: _verPerfilYPresupuestos,
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
                   tooltip: 'Cerrar sesión',
@@ -180,19 +280,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16, top: 4),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.surface, // Crema claro
-              borderRadius: BorderRadius.circular(30), // Píldora
-              border: Border.all(color: const Color(0xFFE0ECEC), width: 1.2),
+              color: AppColors.surface, // Blanco
+              borderRadius: BorderRadius.circular(24), // Elegante píldora redondeada
+              border: Border.all(color: AppColors.borderDashboard, width: 1.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
+                  color: const Color(0x060F172A),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(24),
               child: BottomNavigationBar(
                 currentIndex: _selectedIndex,
                 onTap: (index) {
@@ -227,6 +327,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: const Icon(Icons.credit_card_rounded),
                     ),
                     label: 'Deudas',
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.request_quote_rounded),
+                    label: 'Cotización',
                   ),
                   const BottomNavigationBarItem(
                     icon: Icon(Icons.psychology_rounded),
@@ -264,69 +368,115 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFC0392B))),
               ),
 
-            // TARJETA DE PATRIMONIO NETO
-            Card(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Patrimonio Neto',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
+            // DOS ETIQUETAS INICIALES (PATRIMONIO NETO Y DINERO POR PAGAR)
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: const BorderSide(color: AppColors.borderDashboard, width: 1.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(20.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppColors.skyBlue,
+                            AppColors.mintTeal,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.skyBlue.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Patrimonio Neto',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '\$${_formatMonto(_totalCuentas)}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '\$${_formatMonto(_patrimonioNeto)}',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.shield_rounded, size: 14, color: Color(0xFF3B4A4A)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Centralizado',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF3B4A4A),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Activos - Pasivos',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: const BorderSide(color: AppColors.borderDeudasAlerta, width: 1.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(20.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppColors.blushPink,
+                            AppColors.rosePink,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.rosePink.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Dinero por Pagar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '\$${_formatMonto(_totalDeudas)}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 28),
 
@@ -469,42 +619,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       width: 160,
       margin: const EdgeInsets.only(right: 12),
-      child: Card(
-        color: AppColors.cardBackground,
-        elevation: 0.2,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      cuenta['nombre_banco'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+      child: GestureDetector(
+        onTap: () => _mostrarDetallesCuenta(cuenta),
+        child: Card(
+          color: AppColors.surface, // Blanco
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppColors.borderDashboard, width: 1.0),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        cuenta['nombre_banco'],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Icon(icon, size: 18, color: AppColors.textSecondary),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '\$${_formatMonto(double.tryParse(cuenta['saldo_actual'].toString()) ?? 0.0)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withOpacity(0.12), // Azul suave de la paleta
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 16, color: AppColors.textPrimary),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  '\$${_formatMonto(double.tryParse(cuenta['saldo_actual'].toString()) ?? 0.0)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -513,7 +677,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildTransaccionTile(Map<String, dynamic> tx) {
     final bool isGasto = tx['tipo'] == 'GASTO';
-    final Color colorMonto = isGasto ? AppColors.warning : AppColors.primary;
     final String prefijo = isGasto ? '- ' : '+ ';
     
     String fechaStr = '';
@@ -527,19 +690,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
-        color: AppColors.cardBackground,
-        elevation: 0.1,
+        color: AppColors.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.borderDashboard, width: 0.8),
+        ),
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isGasto ? AppColors.warning.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
+              color: isGasto ? AppColors.warning.withOpacity(0.12) : AppColors.primary.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isGasto ? Icons.arrow_outward_rounded : Icons.south_west_rounded,
-              color: isGasto ? const Color(0xFFC0392B) : const Color(0xFF27AE60),
+              color: isGasto ? AppColors.warning : AppColors.primary,
               size: 20,
             ),
           ),
@@ -554,15 +721,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: colorMonto.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+              color: isGasto ? AppColors.warning.withOpacity(0.12) : AppColors.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               "$prefijo\$${_formatMonto(double.tryParse(tx['monto'].toString()) ?? 0.0)}",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: isGasto ? const Color(0xFFC0392B) : const Color(0xFF27AE60),
+                color: isGasto ? const Color(0xFFC0392B) : const Color(0xFF107C41), // Verde legible para finanzas
               ),
             ),
           ),
@@ -603,6 +770,214 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _mostrarDetallesCuenta(Map<String, dynamic> cuenta) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final double saldo = double.tryParse(cuenta['saldo_actual'].toString()) ?? 0.0;
+        final String nombre = cuenta['nombre_banco'] ?? 'Cuenta';
+        final String tipo = cuenta['tipo_cuenta'] ?? 'AHORRO';
+        final int id = cuenta['id'];
+        
+        // Filtrar transacciones para esta cuenta
+        final listTx = _transacciones.where((tx) => tx['cuenta'] == id).toList();
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.8,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24.0),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        nombre,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.bgDashboard,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderDashboard),
+                        ),
+                        child: Text(
+                          tipo,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Saldo grande
+                  const Text('Saldo Disponible', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\$${_formatMonto(saldo)}',
+                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Botones de acción Agregar / Retirar
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(ctx); // Cerrar bottom sheet
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RegistrarMovimientoScreen(
+                                  cuentas: _cuentas,
+                                  preselectedCuentaId: id,
+                                  preselectedTipo: 'INGRESO',
+                                ),
+                              ),
+                            );
+                            if (result != null) {
+                              _cargarDatos();
+                            }
+                          },
+                          icon: const Icon(Icons.add_rounded, size: 20),
+                          label: const Text('Agregar Dinero'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.secondary, // Verde
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(ctx); // Cerrar bottom sheet
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RegistrarMovimientoScreen(
+                                  cuentas: _cuentas,
+                                  preselectedCuentaId: id,
+                                  preselectedTipo: 'GASTO',
+                                ),
+                              ),
+                            );
+                            if (result != null) {
+                              _cargarDatos();
+                            }
+                          },
+                          icon: const Icon(Icons.remove_rounded, size: 20),
+                          label: const Text('Retirar Dinero'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.warning, // Rojo
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  
+                  const Text(
+                    'Historial Reciente de la Cuenta',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  if (listTx.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'No hay movimientos para esta cuenta.',
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: listTx.length,
+                      separatorBuilder: (_, __) => const Divider(height: 16, thickness: 0.5),
+                      itemBuilder: (context, i) {
+                        final tx = listTx[i];
+                        final bool isGasto = tx['tipo'] == 'GASTO';
+                        final double montoTx = double.tryParse(tx['monto'].toString()) ?? 0.0;
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tx['categoria'] ?? 'General',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
+                                ),
+                                if (tx['descripcion'] != null && tx['descripcion'].toString().isNotEmpty)
+                                  Text(
+                                    tx['descripcion'],
+                                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                  ),
+                              ],
+                            ),
+                            Text(
+                              "${isGasto ? '-' : '+'}\$${_formatMonto(montoTx)}",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: isGasto ? const Color(0xFFC0392B) : const Color(0xFF107C41),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            );
+          }
+        );
+      }
     );
   }
 

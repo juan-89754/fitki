@@ -161,8 +161,18 @@ class _MetasScreenState extends State<MetasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgMetas,
       appBar: AppBar(
         title: const Text('Bolsillos de Ahorro'),
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 28, color: AppColors.textPrimary),
+            tooltip: 'Nuevo Bolsillo',
+            onPressed: () => _abrirFormularioNuevaMeta(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.secondary))
@@ -220,12 +230,6 @@ class _MetasScreenState extends State<MetasScreen> {
                 ),
               ),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _abrirFormularioNuevaMeta(),
-        backgroundColor: AppColors.primary,
-        foregroundColor: const Color(0xFF3B4A4A),
-        child: const Icon(Icons.add_rounded),
-      ),
     );
   }
 
@@ -236,137 +240,141 @@ class _MetasScreenState extends State<MetasScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      child: Card(
-        color: AppColors.primary, // Verde Menta (Identidad del módulo de Ahorros)
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: AppColors.accent, width: 1.5), // Borde Beige Cálido
-        ),
-        elevation: 0,
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      meta['nombre'],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+      decoration: BoxDecoration(
+        color: AppColors.surface, // Blanco Puro
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderMetas, width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.25), // Brillo verde menta
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    meta['nombre'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF5E6F6F)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    onSelected: (val) {
-                      if (val == 'ver') {
-                        _abrirDetallesMeta(meta);
-                      } else if (val == 'editar') {
-                        _abrirFormularioNuevaMeta(metaParaEditar: meta);
-                      } else if (val == 'eliminar') {
-                        _confirmarEliminarMeta(meta);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'ver', child: Row(children: [Icon(Icons.query_stats_rounded, size: 18), SizedBox(width: 8), Text('Ver Detalles')])),
-                      const PopupMenuItem(value: 'editar', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Editar')])),
-                      const PopupMenuItem(value: 'eliminar', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFC0392B)), SizedBox(width: 8), Text('Eliminar', style: TextStyle(color: Color(0xFFC0392B)))]))
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '\$${_formatMonto(ahorrado)} ahorrados',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF3B4A4A)),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFD8), // Crema Claro
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE5ECEC), width: 0.5),
-                    ),
-                    child: Text(
-                      '${progreso.toStringAsFixed(1)}%',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              
-              // Barra de Progreso Lineal
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progreso / 100.0,
-                  minHeight: 8,
-                  backgroundColor: const Color(0xFFFFFFD8), // Crema Claro
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary), // Lavanda
                 ),
-              ),
-              const SizedBox(height: 12),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  onSelected: (val) {
+                    if (val == 'ver') {
+                      _abrirDetallesMeta(meta);
+                    } else if (val == 'editar') {
+                      _abrirFormularioNuevaMeta(metaParaEditar: meta);
+                    } else if (val == 'eliminar') {
+                      _confirmarEliminarMeta(meta);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'ver', child: Row(children: [Icon(Icons.query_stats_rounded, size: 18), SizedBox(width: 8), Text('Ver Detalles')])),
+                    const PopupMenuItem(value: 'editar', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Editar')])),
+                    const PopupMenuItem(value: 'eliminar', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFC0392B)), SizedBox(width: 8), Text('Eliminar', style: TextStyle(color: Color(0xFFC0392B)))]))
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Objetivo: \$${_formatMonto(objetivo)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF5E6F6F),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '\$${_formatMonto(ahorrado)} ahorrados',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface, // Blanco Puro
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.borderMetas, width: 1.0),
+                  ),
+                  child: Text(
+                    '${progreso.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  Text(
-                    'Límite: ${meta['fecha_limite']}',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Barra de Progreso Lineal
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progreso / 100.0,
+                minHeight: 8,
+                backgroundColor: AppColors.background, // Gris claro neutro
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary), // Azul Cielo para contraste
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Objetivo: \$${_formatMonto(objetivo)}',
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF5E6F6F),
-                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
-              const Divider(height: 24, thickness: 0.5, color: Color(0xFFD0DFDF)),
-              
-              // BOTÓN PARA ABONAR DINERO
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _abrirAbonoMeta(meta),
-                  icon: const Icon(Icons.add_card_rounded, size: 18, color: Color(0xFF2C3E50)),
-                  label: const Text('Abonar a bolsillo', style: TextStyle(color: Color(0xFF2C3E50))),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFFD8), // Crema Claro para contraste premium
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFFE5ECEC), width: 0.8),
-                    ),
+                ),
+                Text(
+                  'Límite: ${meta['fecha_limite']}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24, thickness: 0.5, color: AppColors.borderMetas),
+            
+            // BOTÓN PARA ABONAR DINERO
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _abrirAbonoMeta(meta),
+                icon: const Icon(Icons.add_card_rounded, size: 18, color: AppColors.textPrimary),
+                label: const Text('Abonar a bolsillo', style: TextStyle(color: AppColors.textPrimary)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.surface, // Blanco para contraste premium
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.borderMetas, width: 1.0),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -781,6 +789,7 @@ class _NuevaMetaFormModalState extends State<NuevaMetaFormModal> {
 
   void _guardarMeta() async {
     if (!_formKey.currentState!.validate()) return;
+    final esEdicion = widget.meta != null;
     if (_fechaLimite == null) {
       setState(() {
         _errorMessage = 'Por favor selecciona una fecha límite.';
@@ -809,7 +818,22 @@ class _NuevaMetaFormModalState extends State<NuevaMetaFormModal> {
     });
 
     if (result['success']) {
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(esEdicion ? '¡Bolsillo de ahorro actualizado!' : '¡Bolsillo de ahorro creado con éxito!'),
+              ],
+            ),
+            backgroundColor: AppColors.secondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } else {
       setState(() {
         _errorMessage = result['message'] ?? 'Error al guardar la meta.';

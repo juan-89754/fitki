@@ -75,20 +75,6 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     });
   }
 
-  double? _extraerMonto(String texto) {
-    // Regex robusta para capturar números con formato de moneda:
-    // Captura números planos o con puntos (ej: 200.000, 1.200.000, 50000)
-    final RegExp regex = RegExp(r'(?:[\$]?\s*)(\d{1,3}(?:\.\d{3})+|\d+)');
-    final match = regex.firstMatch(texto);
-    
-    if (match != null) {
-      String valorDetectado = match.group(1)!;
-      // Remover puntos de formato de miles
-      valorDetectado = valorDetectado.replaceAll('.', '');
-      return double.tryParse(valorDetectado);
-    }
-    return null;
-  }
 
   void _enviarMensaje() async {
     final texto = _textController.text.trim();
@@ -111,29 +97,8 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     _scrollToBottom();
     await _guardarHistorial();
 
-    // Extraer monto del texto usando regex
-    final double? monto = _extraerMonto(texto);
-
-    if (monto == null) {
-      // Respuesta si no se detectó monto
-      await Future.delayed(const Duration(milliseconds: 800));
-      final respuestaSinMonto = {
-        'sender': 'fitki',
-        'text': 'No logré identificar el precio de la compra en tu mensaje. Por favor, asegúrate de incluir el valor con puntos o plano. Ej: "comprar reloj 350.000" o "comprar bolso 150000".',
-        'status': 'normal',
-        'time': DateTime.now().toIsoformatString(),
-      };
-      setState(() {
-        _mensajes.add(respuestaSinMonto);
-        _isWriting = false;
-      });
-      _scrollToBottom();
-      await _guardarHistorial();
-      return;
-    }
-
-    // Consultar a la API de Django
-    final result = await _apiService.consultarAsistente(monto);
+    // Consultar a la API de Django con la consulta de texto
+    final result = await _apiService.consultarAsistenteTexto(texto);
 
     setState(() {
       _isWriting = false;
@@ -141,14 +106,17 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
 
     if (result['success']) {
       final data = result['data'];
-      final bool aprobado = data['aprobado'] == true;
+      final String status = data['status'] ?? 'normal';
       final String sugerencia = data['sugerencia'] ?? '';
 
       final respuestaFitki = {
         'sender': 'fitki',
         'text': sugerencia,
-        'status': aprobado ? 'approved' : 'rejected',
+        'status': status,
         'time': DateTime.now().toIsoformatString(),
+        'cantidad_viable': data['cantidad_viable'],
+        'articulo': data['articulo'],
+        'precio_unitario': data['precio_unitario'] != null ? double.tryParse(data['precio_unitario'].toString()) : null,
       };
 
       setState(() {
@@ -209,7 +177,9 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgAsistente,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: Row(
           children: [
             CircleAvatar(
@@ -239,27 +209,24 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
           )
         ],
       ),
-      body: Container(
-        color: AppColors.background,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(20),
-                itemCount: _mensajes.length + (_isWriting ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _mensajes.length) {
-                    return _buildWritingIndicator();
-                  }
-                  final msg = _mensajes[index];
-                  return _buildChatBubble(msg);
-                },
-              ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(20),
+              itemCount: _mensajes.length + (_isWriting ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _mensajes.length) {
+                  return _buildWritingIndicator();
+                }
+                final msg = _mensajes[index];
+                return _buildChatBubble(msg);
+              },
             ),
-            _buildInputPanel(),
-          ],
-        ),
+          ),
+          _buildInputPanel(),
+        ],
       ),
     );
   }
@@ -269,11 +236,18 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     final String status = msg['status'] ?? 'normal';
 
     Color bubbleColor;
-    Color textColor = AppColors.textPrimary;
+    BoxShadow shadow;
+    Border border;
     BorderRadius borderRadius;
 
     if (isUser) {
-      bubbleColor = const Color(0xFFC7CEEA); // Lavanda Grisáceo
+      bubbleColor = AppColors.secondary; // Azul Cielo sólido
+      shadow = BoxShadow(
+        color: AppColors.secondary.withOpacity(0.35),
+        blurRadius: 8,
+        offset: const Offset(0, 4),
+      );
+      border = Border.all(color: Colors.transparent, width: 0);
       borderRadius = const BorderRadius.only(
         topLeft: Radius.circular(16),
         topRight: Radius.circular(16),
@@ -281,11 +255,37 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
       );
     } else {
       if (status == 'approved') {
-        bubbleColor = const Color(0xFFB5EAD7); // Verde menta pastel
+        bubbleColor = AppColors.primary; // Verde Menta sólido
+        shadow = BoxShadow(
+          color: AppColors.primary.withOpacity(0.35),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        );
+        border = Border.all(color: Colors.transparent, width: 0);
       } else if (status == 'rejected') {
-        bubbleColor = const Color(0xFFFF9AA2); // Rosa suave pastel
+        bubbleColor = AppColors.warning; // Rosa Rosado sólido
+        shadow = BoxShadow(
+          color: AppColors.warning.withOpacity(0.35),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        );
+        border = Border.all(color: Colors.transparent, width: 0);
+      } else if (status == 'partially_approved') {
+        bubbleColor = AppColors.butterYellow; // Amarillo Mantequilla sólido
+        shadow = BoxShadow(
+          color: AppColors.butterYellow.withOpacity(0.45),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        );
+        border = Border.all(color: Colors.transparent, width: 0);
       } else {
-        bubbleColor = const Color(0xFFFFFFD8); // Crema claro
+        bubbleColor = AppColors.surface; // Blanco puro
+        shadow = BoxShadow(
+          color: AppColors.borderAsistente.withOpacity(0.3),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        );
+        border = Border.all(color: AppColors.borderAsistente, width: 1.0);
       }
       borderRadius = const BorderRadius.only(
         topLeft: Radius.circular(16),
@@ -293,6 +293,11 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
         bottomRight: Radius.circular(16),
       );
     }
+
+    final bool hasViableSuggestion = !isUser && 
+        status == 'partially_approved' && 
+        msg['cantidad_viable'] != null && 
+        msg['cantidad_viable'] > 0;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -305,25 +310,209 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
         decoration: BoxDecoration(
           color: bubbleColor,
           borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: border,
+          boxShadow: [shadow],
         ),
-        child: Text(
-          msg['text'],
-          style: TextStyle(
-            color: textColor,
-            fontSize: 13.5,
-            height: 1.4,
-            fontWeight: FontWeight.w500,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              msg['text'],
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13.5,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (hasViableSuggestion) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _agregarSugerenciaAlPlan(
+                    msg['articulo'],
+                    msg['cantidad_viable'],
+                    msg['precio_unitario'],
+                  ),
+                  icon: const Icon(Icons.add_task_rounded, size: 16, color: AppColors.textPrimary),
+                  label: Text(
+                    'Agregar ${msg['cantidad_viable']} unidades al Plan',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.surface, // Resaltar
+                    elevation: 1,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
+  }
+
+  void _agregarSugerenciaAlPlan(String? articulo, int? cantidad, double? precioUnitario) async {
+    if (articulo == null || cantidad == null || precioUnitario == null) return;
+    
+    setState(() {
+      _isWriting = true;
+    });
+
+    try {
+      final resProj = await _apiService.getProyectosCompra();
+      if (!resProj['success']) {
+        throw Exception(resProj['message'] ?? 'Error al conectar.');
+      }
+      
+      final List<dynamic> proyectos = resProj['data'] ?? [];
+      int? proyectoIdSeleccionado;
+      
+      if (proyectos.isEmpty) {
+        proyectoIdSeleccionado = await _crearProyectoNuevoAutomatico(articulo);
+      } else {
+        proyectoIdSeleccionado = await showDialog<int>(
+          context: context,
+          builder: (ctx) {
+            int? tempId = proyectos.first['id'];
+            return StatefulBuilder(
+              builder: (context, setDialogState) {
+                return AlertDialog(
+                  title: const Text('Asignar a un Proyecto'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Elige el proyecto donde deseas agrupar este producto:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<int>(
+                        value: tempId,
+                        items: [
+                          ...proyectos.map((p) => DropdownMenuItem<int>(
+                            value: p['id'],
+                            child: Text(p['nombre'].toString(), overflow: TextOverflow.ellipsis),
+                          )),
+                          const DropdownMenuItem<int>(
+                            value: -1,
+                            child: Text('+ Crear nuevo proyecto...', style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          setDialogState(() {
+                            tempId = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancelar')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, tempId),
+                      child: const Text('Aceptar', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                );
+              }
+            );
+          }
+        );
+        
+        if (proyectoIdSeleccionado == null) {
+          setState(() {
+            _isWriting = false;
+          });
+          return;
+        }
+        
+        if (proyectoIdSeleccionado == -1) {
+          proyectoIdSeleccionado = await _crearProyectoNuevoAutomatico(articulo);
+        }
+      }
+      
+      if (proyectoIdSeleccionado == null || proyectoIdSeleccionado <= 0) {
+        throw Exception('No se pudo determinar el proyecto.');
+      }
+      
+      final resItem = await _apiService.createItemProyecto(
+        proyectoIdSeleccionado,
+        articulo,
+        cantidad,
+        precioUnitario,
+        'MEDIA',
+        'Sugerido por Asistente Fitki',
+      );
+      
+      if (!resItem['success']) {
+        throw Exception(resItem['message'] ?? 'Error al guardar el producto.');
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('¡"$articulo" agregado al proyecto con éxito!'),
+            backgroundColor: const Color(0xFF27AE60),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      
+      final msgConfirm = {
+        'sender': 'fitki',
+        'text': '¡Listo! He agregado "$articulo" ($cantidad unidades) al proyecto de compra por un costo total de \$${_formatMonto(cantidad * precioUnitario)}.',
+        'status': 'approved',
+        'time': DateTime.now().toIsoformatString(),
+      };
+      
+      setState(() {
+        _mensajes.add(msgConfirm);
+      });
+      _scrollToBottom();
+      await _guardarHistorial();
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: const Color(0xFFC0392B),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isWriting = false;
+      });
+    }
+  }
+
+  Future<int?> _crearProyectoNuevoAutomatico(String articulo) async {
+    final String fechaEjecucion = DateTime.now().add(const Duration(days: 30)).toIso8601String().substring(0, 10);
+    final res = await _apiService.createProyectoCompra(
+      'Compra: $articulo',
+      'Proyecto creado automáticamente por el Asistente Fitki',
+      'No especificado',
+      fechaEjecucion,
+      'MEDIA',
+      'PENDIENTE',
+      'Creado desde el chat.',
+      '#Sugerido',
+    );
+    if (res['success']) {
+      return res['data']['id'];
+    }
+    return null;
+  }
+
+  String _formatMonto(double monto) {
+    return monto.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
   }
 
   Widget _buildWritingIndicator() {
@@ -333,17 +522,18 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFD8),
+          color: AppColors.surface, // Blanco puro
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
             bottomRight: Radius.circular(16),
           ),
+          border: Border.all(color: AppColors.borderAsistente, width: 1.0),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: AppColors.borderAsistente.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -380,7 +570,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           border: const Border(
-            top: BorderSide(color: AppColors.background, width: 1.5),
+            top: BorderSide(color: AppColors.borderAsistente, width: 1.0),
           ),
         ),
         child: Row(
@@ -388,7 +578,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: AppColors.bgAsistente, // Fondo amarillo suave
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextFormField(
@@ -408,11 +598,11 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
             InkWell(
               onTap: _enviarMensaje,
               borderRadius: BorderRadius.circular(24),
-              child: CircleAvatar(
+              child: const CircleAvatar(
                 radius: 22,
-                backgroundColor: AppColors.secondary,
+                backgroundColor: AppColors.secondary, // Sky Blue
                 foregroundColor: AppColors.textPrimary,
-                child: const Icon(Icons.send_rounded, size: 18),
+                child: Icon(Icons.send_rounded, size: 18),
               ),
             ),
           ],

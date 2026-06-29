@@ -8,5 +8,10 @@ void main() {
 
     // Verificar que el título 'FITKI' se dibuje en pantalla
     expect(find.text('FITKI'), findsOneWidget);
+
+    // Avanzar el tiempo simulado para completar el Future.delayed y evitar temporizadores pendientes
+    await tester.pump(const Duration(milliseconds: 1300));
   });
 }
+
+

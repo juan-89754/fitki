@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario, Cuenta, MetaAhorro, Deuda, Transaccion
+from .models import Usuario, Cuenta, MetaAhorro, Deuda, Transaccion, ProyectoCompra, ItemProyecto
 
 @admin.register(Usuario)
 class CustomUserAdmin(UserAdmin):
@@ -36,3 +36,18 @@ class TransaccionAdmin(admin.ModelAdmin):
     list_display = ['tipo', 'monto', 'categoria', 'cuenta', 'fecha', 'usuario']
     list_filter = ['tipo', 'categoria', 'fecha']
     search_fields = ['categoria', 'descripcion', 'usuario__username', 'cuenta__nombre_banco']
+
+
+
+@admin.register(ProyectoCompra)
+class ProyectoCompraAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'proveedor', 'fecha_ejecucion', 'prioridad', 'estado', 'usuario']
+    list_filter = ['prioridad', 'estado', 'fecha_ejecucion']
+    search_fields = ['nombre', 'proveedor', 'usuario__username']
+
+
+@admin.register(ItemProyecto)
+class ItemProyectoAdmin(admin.ModelAdmin):
+    list_display = ['articulo', 'cantidad', 'precio_unitario', 'costo_total', 'prioridad', 'proyecto']
+    list_filter = ['prioridad']
+    search_fields = ['articulo', 'proyecto__nombre']

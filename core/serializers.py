@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
-from .models import Cuenta, Transaccion, MetaAhorro, Deuda
+from .models import Cuenta, Transaccion, MetaAhorro, Deuda, ProyectoCompra, ItemProyecto
 
 User = get_user_model()
 
@@ -349,3 +349,36 @@ class TransaccionSerializer(serializers.ModelSerializer):
             deuda.save()
 
         return transaccion
+
+
+
+
+
+
+class ItemProyectoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemProyecto
+        fields = [
+            'id', 'proyecto', 'articulo', 'cantidad', 'precio_unitario', 
+            'costo_total', 'prioridad', 'nota', 'fecha_creacion'
+        ]
+        read_only_fields = ['costo_total', 'fecha_creacion']
+
+
+class ProyectoCompraSerializer(serializers.ModelSerializer):
+    usuario = serializers.PrimaryKeyRelatedField(read_only=True)
+    items = ItemProyectoSerializer(many=True, read_only=True)
+    costo_total = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ProyectoCompra
+        fields = [
+            'id', 'usuario', 'nombre', 'descripcion', 'proveedor', 
+            'fecha_ejecucion', 'prioridad', 'estado', 'notas', 
+            'etiquetas', 'items', 'costo_total', 'fecha_creacion'
+        ]
+        read_only_fields = ['fecha_creacion']
+
+
+
+

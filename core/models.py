@@ -107,3 +107,60 @@ class Transaccion(models.Model):
 
     def __str__(self):
         return f"{self.tipo} - {self.monto} ({self.categoria}) en {self.cuenta.nombre_banco}"
+
+
+
+
+class ProyectoCompra(models.Model):
+    PRIORIDAD_CHOICES = [
+        ('ALTA', 'Alta'),
+        ('MEDIA', 'Media'),
+        ('BAJA', 'Baja'),
+    ]
+    ESTADO_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('COTIZADO', 'Cotizado'),
+        ('COMPRADO', 'Comprado'),
+        ('CANCELADO', 'Cancelado'),
+    ]
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='proyectos_compra')
+    nombre = models.CharField(max_length=150, help_text="Nombre del proyecto de compra")
+    descripcion = models.TextField(blank=True, null=True, help_text="Descripción o contexto del proyecto")
+    proveedor = models.CharField(max_length=150, blank=True, null=True, help_text="Proveedor o lugar de compra")
+    fecha_ejecucion = models.DateField(help_text="Fecha planeada para ejecutar el proyecto")
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='MEDIA')
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='PENDIENTE')
+    notas = models.TextField(blank=True, null=True, help_text="Notas y observaciones personalizadas")
+    etiquetas = models.CharField(max_length=255, blank=True, null=True, help_text="Clasificación o tags (ej: #Hogar)")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def costo_total(self):
+        return sum(float(item.costo_total) for item in self.items.all())
+
+    def __str__(self):
+        return f"{self.nombre} ({self.estado}) - Total: {self.costo_total}"
+
+
+class ItemProyecto(models.Model):
+    PRIORIDAD_CHOICES = [
+        ('ALTA', 'Alta'),
+        ('MEDIA', 'Media'),
+        ('BAJA', 'Baja'),
+    ]
+    proyecto = models.ForeignKey(ProyectoCompra, on_delete=models.CASCADE, related_name='items')
+    articulo = models.CharField(max_length=150, help_text="Nombre del artículo o producto")
+    cantidad = models.IntegerField(default=1, help_text="Cantidad del producto")
+    precio_unitario = models.DecimalField(max_digits=15, decimal_places=2, help_text="Precio unitario")
+    costo_total = models.DecimalField(max_digits=15, decimal_places=2, help_text="Costo total de la línea")
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='MEDIA')
+    nota = models.CharField(max_length=255, blank=True, null=True, help_text="Nota del producto (ej: color o modelo)")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.costo_total = self.cantidad * self.precio_unitario
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.articulo} x{self.cantidad} - Total: {self.costo_total}"

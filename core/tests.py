@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.utils import timezone
 from datetime import timedelta
-from .models import Cuenta, Transaccion, MetaAhorro, Deuda
+from .models import Cuenta, Transaccion, MetaAhorro, Deuda, ProyectoCompra, ItemProyecto
 
 User = get_user_model()
 
@@ -237,3 +237,103 @@ class FitkiAPITests(APITestCase):
         self.assertEqual(resp_inviable.status_code, status.HTTP_200_OK)
         self.assertFalse(resp_inviable.data['aprobado'])
         self.assertIn("retrasarás tu meta de 'Viaje'", resp_inviable.data['sugerencia'])
+
+
+
+
+    def test_proyecto_compra_y_asistente_analisis(self):
+        # 1. Crear Proyecto de Compra "Remodelación Cocina"
+        proyectos_url = reverse('proyecto-compra-list')
+        proyecto_data = {
+            "nombre": "Remodelación Cocina",
+            "descripcion": "Cosas para renovar la cocina",
+            "proveedor": "Homecenter",
+            "fecha_ejecucion": (timezone.now().date() + timedelta(days=20)).isoformat(),
+            "prioridad": "MEDIA",
+            "estado": "PENDIENTE",
+            "notas": "Buscar descuentos"
+        }
+        resp_proj = self.client.post(proyectos_url, proyecto_data, format='json')
+        self.assertEqual(resp_proj.status_code, status.HTTP_201_CREATED)
+        proyecto_id = resp_proj.data['id']
+
+        # 2. Agregar ítems al proyecto
+        items_url = reverse('item-proyecto-list')
+        item1_data = {
+            "proyecto": proyecto_id,
+            "articulo": "Nevera",
+            "cantidad": 1,
+            "precio_unitario": 2000000.00,
+            "prioridad": "ALTA"
+        }
+        resp_item1 = self.client.post(items_url, item1_data, format='json')
+        self.assertEqual(resp_item1.status_code, status.HTTP_201_CREATED)
+        
+        item2_data = {
+            "proyecto": proyecto_id,
+            "articulo": "Estufa",
+            "cantidad": 1,
+            "precio_unitario": 1000000.00,
+            "prioridad": "BAJA"
+        }
+        self.client.post(items_url, item2_data, format='json')
+
+        # Verificar que el costo_total del proyecto expuesto en la API se sume dinámicamente como propiedad
+        resp_proj_get = self.client.get(f"{proyectos_url}{proyecto_id}/")
+        self.assertEqual(float(resp_proj_get.data['costo_total']), 3000000.00)
+
+        # 3. Test Asistente: Analizar el proyecto "Remodelación Cocina"
+        # Usamos saldo_prueba de 4.000.000 (CGL = 4M, viable porque total = 3M)
+        consulta_data = {
+            "query": "Fitki, analiza mi proyecto 'Remodelación Cocina'",
+            "saldo_prueba": 4000000.00
+        }
+        resp_asis = self.client.post(self.asistente_url, consulta_data, format='json')
+        self.assertEqual(resp_asis.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp_asis.data['aprobado'])
+        self.assertIn("VIABLE", resp_asis.data['sugerencia'])
+
+        # 4. Test Asistente: Proyecto no viable pero con recomendación de alta prioridad
+        # Usamos saldo_prueba de 2.500.000 (CGL = 2.5M, total = 3M, alta prioridad es 2M)
+        consulta_data_inviable = {
+            "query": "analiza el proyecto de Remodelación Cocina",
+            "saldo_prueba": 2500000.00
+        }
+        resp_asis_inv = self.client.post(self.asistente_url, consulta_data_inviable, format='json')
+        self.assertEqual(resp_asis_inv.status_code, status.HTTP_200_OK)
+        self.assertFalse(resp_asis_inv.data['aprobado'])
+        self.assertIn("priorizar los productos de 'Alta' prioridad", resp_asis_inv.data['sugerencia'])
+
+        # 5. Test Asistente: Conflictos entre múltiples proyectos
+        # Crear un segundo proyecto de 2.000.000
+        proyecto2_data = {
+            "nombre": "Proyecto Tecnología",
+            "descripcion": "Celular y audífonos",
+            "proveedor": "Amazon",
+            "fecha_ejecucion": (timezone.now().date() + timedelta(days=25)).isoformat(),
+            "prioridad": "MEDIA",
+            "estado": "PENDIENTE"
+        }
+        resp_proj2 = self.client.post(proyectos_url, proyecto2_data, format='json')
+        proyecto2_id = resp_proj2.data['id']
+        self.client.post(items_url, {
+            "proyecto": proyecto2_id,
+            "articulo": "Celular",
+            "cantidad": 1,
+            "precio_unitario": 2000000.00,
+            "prioridad": "MEDIA"
+        }, format='json')
+
+        # CGL = 4M, Proyecto1 = 3M, Proyecto2 = 2M. Total = 5M > 4M CGL.
+        # Al preguntar por Proyecto1, debe alertar de conflicto con Proyecto2
+        consulta_conflicto = {
+            "query": "analiza el proyecto de Remodelación Cocina",
+            "saldo_prueba": 4000000.00
+        }
+        resp_conf = self.client.post(self.asistente_url, consulta_conflicto, format='json')
+        self.assertEqual(resp_conf.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp_conf.data['aprobado']) # Es viable individualmente
+        self.assertIn("también tienes el proyecto 'Proyecto Tecnología' pendiente", resp_conf.data['sugerencia'])
+
+
+
